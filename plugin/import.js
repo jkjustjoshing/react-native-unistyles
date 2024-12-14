@@ -27,11 +27,12 @@ function addUnistylesImport(t, path, state) {
 
     // import components from react-native-unistyles
     pairs.forEach(([localName, name]) => {
+        // todo add support for commonjs
         const newImport = t.importDeclaration(
             [t.importSpecifier(t.identifier(localName), t.identifier(name))],
             t.stringLiteral(state.opts.isLocal
                 ? state.file.opts.filename.split('react-native-unistyles').at(0).concat(`react-native-unistyles/components/native/${name}`)
-                : `react-native-unistyles/components/native/${name}`
+                : `react-native-unistyles/lib/module/components/native/${name}`
             )
         )
 
