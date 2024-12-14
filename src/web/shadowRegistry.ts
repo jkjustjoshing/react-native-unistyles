@@ -1,13 +1,12 @@
 import type { UnistylesTheme, UnistylesValues } from '../types'
-import { UnistylesListener } from './listener'
-import { UnistylesRegistry } from './registry'
 import { deepMergeObjects } from '../utils'
 import { equal, extractSecrets, extractUnistyleDependencies, isInDocument, keyInObject } from './utils'
 import { getVariants } from './variants'
+import type { UnistylesWebServices } from './types'
 
 type Style = UnistylesValues | ((...args: Array<any>) => UnistylesValues)
 
-class UnistylesShadowRegistryBuilder {
+export class UnistylesShadowRegistry {
     // MOCKS
     name = 'UnistylesShadowRegistry'
     __type = 'web'
@@ -15,6 +14,8 @@ class UnistylesShadowRegistryBuilder {
     toString = () => 'UnistylesShadowRegistry'
     dispose = () => {}
     // END MOCKS
+
+    constructor(private services: UnistylesWebServices) {}
 
     private resultsMap = new Map<HTMLElement, UnistylesValues>()
     private classNamesMap = new Map<HTMLElement, Array<string>>()
@@ -44,7 +45,7 @@ class UnistylesShadowRegistryBuilder {
                     this.disposeMap.delete(ref)
 
                     if (oldResult) {
-                        UnistylesRegistry.remove(oldResult)
+                        this.services.UnistylesRegistry.remove(oldResult)
                     }
                 })
             })
@@ -78,7 +79,7 @@ class UnistylesShadowRegistryBuilder {
                 }
 
                 const { __uni__key, __uni__stylesheet, __uni__args = [], __uni__refs } = secrets
-                const newComputedStylesheet = UnistylesRegistry.getComputedStylesheet(__uni__stylesheet, scopedTheme)
+                const newComputedStylesheet = this.services.UnistylesRegistry.getComputedStylesheet(__uni__stylesheet, scopedTheme)
                 const style = newComputedStylesheet[__uni__key] as (UnistylesValues | ((...args: any) => UnistylesValues))
                 const args = __uni__args
                 const result = typeof style === 'function'
@@ -90,7 +91,7 @@ class UnistylesShadowRegistryBuilder {
 
                 if (typeof __uni__stylesheet === 'function') {
                     // Add dependencies from dynamic styles to stylesheet
-                    UnistylesRegistry.addDependenciesToStylesheet(__uni__stylesheet, dependencies)
+                    this.services.UnistylesRegistry.addDependenciesToStylesheet(__uni__stylesheet, dependencies)
                 }
 
                 __uni__refs.add(ref)
@@ -114,21 +115,21 @@ class UnistylesShadowRegistryBuilder {
 
         // Remove old styles
         if (oldStyles) {
-            UnistylesRegistry.remove(oldStyles)
+            this.services.UnistylesRegistry.remove(oldStyles)
         }
 
         // Remove old classnames from the ref
         oldClassNames?.forEach(className => ref.classList.remove(className))
         this.resultsMap.set(ref, combinedStyles)
 
-        const { hash } = UnistylesRegistry.add(combinedStyles)
+        const { hash } = this.services.UnistylesRegistry.add(combinedStyles)
         const injectedClassNames = combinedStyles?._web?._classNames ?? []
         const newClassNames = (Array.isArray(injectedClassNames) ? injectedClassNames : [injectedClassNames]).concat(hash)
         const dependencies = Array.from(new Set(parsedStyles.flatMap(style => extractUnistyleDependencies(style))))
 
         this.disposeMap.get(ref)?.()
-        this.disposeMap.set(ref, UnistylesListener.addListeners(dependencies, () => {
-            UnistylesRegistry.applyStyles(hash, deepMergeObjects(...getParsedStyles()))
+        this.disposeMap.set(ref, this.services.UnistylesListener.addListeners(dependencies, () => {
+            this.services.UnistylesRegistry.applyStyles(hash, deepMergeObjects(...getParsedStyles()))
         }))
         this.classNamesMap.set(ref, newClassNames)
         // Add new classnames to the ref
@@ -159,5 +160,3 @@ class UnistylesShadowRegistryBuilder {
 
     remove = () => {}
 }
-
-export const UnistylesShadowRegistry = new UnistylesShadowRegistryBuilder()

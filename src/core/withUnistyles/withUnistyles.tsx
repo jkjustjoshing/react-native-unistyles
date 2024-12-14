@@ -1,6 +1,5 @@
 import React, { useEffect, useState, type ComponentType, forwardRef, useRef, useMemo, type ComponentProps, type ComponentRef } from 'react'
 import type { PartialBy } from '../../types/common'
-import { UnistylesListener } from '../../web/listener'
 import { UnistylesShadowRegistry } from '../../web'
 import { equal } from '../../web/utils'
 import { deepMergeObjects } from '../../utils'
@@ -8,6 +7,7 @@ import type { Mappings, SupportedStyleProps } from './types'
 import { useDependencies } from './useDependencies'
 import { UnistyleDependency } from '../../specs/NativePlatform'
 import type { UnistylesValues } from '../../types'
+import { UnistylesWeb } from '../../web/unistylesWeb'
 
 const useShadowRegistry = (style?: Record<string, any>) => {
     const [ref] = useState(document.createElement('div'))
@@ -56,8 +56,8 @@ export const withUnistyles = <TComponent, TMappings extends GenericComponentProp
         const styleClassNames = useShadowRegistry(narrowedProps.style)
         const contentContainerStyleClassNames = useShadowRegistry(narrowedProps.contentContainerStyle)
         const { mappingsCallback } = useDependencies(({ dependencies, updateTheme, updateRuntime }) => {
-            const disposeTheme = UnistylesListener.addListeners(dependencies.filter(dependency => dependency === UnistyleDependency.Theme), updateTheme)
-            const disposeRuntime = UnistylesListener.addListeners(dependencies.filter(dependency => dependency !== UnistyleDependency.Theme), updateRuntime)
+            const disposeTheme = UnistylesWeb.UnistylesListener.addListeners(dependencies.filter(dependency => dependency === UnistyleDependency.Theme), updateTheme)
+            const disposeRuntime = UnistylesWeb.UnistylesListener.addListeners(dependencies.filter(dependency => dependency !== UnistyleDependency.Theme), updateRuntime)
 
             return () => {
                 disposeTheme()

@@ -2,8 +2,8 @@ import type { UnistyleDependency } from '../../specs/NativePlatform'
 import { ColorScheme, Orientation } from '../../specs/types'
 import type { StyleSheet, StyleSheetWithSuperPowers, UnistylesValues } from '../../types/stylesheet'
 import { isUnistylesMq, parseMq } from '../../mq'
-import { UnistylesState } from '../state'
 import { keyInObject, reduceObject } from './common'
+import { UnistylesWeb } from '../unistylesWeb'
 
 export const schemeToTheme = (scheme: ColorScheme) => {
     switch (scheme) {
@@ -77,7 +77,7 @@ export const getMediaQuery = (query: string) => {
         ].filter(Boolean).join(' and ')
     }
 
-    const minWidth = UnistylesState.breakpoints && keyInObject(UnistylesState.breakpoints, query) ? UnistylesState.breakpoints[query] : undefined
+    const minWidth = UnistylesWeb.UnistylesState.breakpoints && keyInObject(UnistylesWeb.UnistylesState.breakpoints, query) ? UnistylesWeb.UnistylesState.breakpoints[query] : undefined
 
     return `(min-width: ${minWidth ?? 0}px)`
 }

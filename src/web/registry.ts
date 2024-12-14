@@ -1,10 +1,9 @@
 import type { UnistylesTheme, UnistylesValues } from '../types'
 import type { StyleSheet, StyleSheetWithSuperPowers } from '../types/stylesheet'
-import { UnistylesRuntime } from './runtime'
 import { extractMediaQueryValue, keyInObject, getMediaQuery, generateHash, extractUnistyleDependencies, error } from './utils'
-import { UnistylesListener } from './listener'
 import { convertUnistyles } from './convert'
 import type { UnistylesMiniRuntime, UnistyleDependency } from '../specs'
+import type { UnistylesWebServices } from './types'
 
 type ApplyRuleProps = {
     hash: string,
@@ -15,12 +14,14 @@ type ApplyRuleProps = {
 
 type RemoveReadonlyStyleKeys<T extends string> = T extends 'length' | 'parentRule' ? never : T
 
-class UnistylesRegistryBuilder {
+export class UnistylesRegistry {
     private readonly stylesheets = new Map<StyleSheetWithSuperPowers<StyleSheet>, StyleSheet>()
     private readonly stylesCounter = new Map<string, Set<UnistylesValues>>()
     #styleTag: HTMLStyleElement | null = null
     private readonly disposeListenersMap = new Map<object, VoidFunction>()
     private readonly dependenciesMap = new Map<StyleSheetWithSuperPowers<StyleSheet>, Set<UnistyleDependency>>()
+
+    constructor(private services: UnistylesWebServices) {}
 
     private get styleTag() {
         const tag = this.#styleTag
@@ -44,13 +45,13 @@ class UnistylesRegistryBuilder {
         }
 
         if (scopedThemeName) {
-            const scopedTheme = UnistylesRuntime.getTheme(scopedThemeName)
+            const scopedTheme = this.services.UnistylesRuntime.getTheme(scopedThemeName)
 
             if (!scopedTheme) {
                 throw error(`Unistyles: You're trying to use scoped theme '${scopedThemeName}' but it wasn't registered.`)
             }
 
-            return stylesheet(scopedTheme, UnistylesRuntime.miniRuntime)
+            return stylesheet(scopedTheme, this.services.UnistylesRuntime.miniRuntime)
         }
 
         const computedStylesheet = this.stylesheets.get(stylesheet)
@@ -59,7 +60,7 @@ class UnistylesRegistryBuilder {
             return computedStylesheet
         }
 
-        const createdStylesheet = stylesheet(UnistylesRuntime.theme, UnistylesRuntime.miniRuntime)
+        const createdStylesheet = stylesheet(this.services.UnistylesRuntime.theme, this.services.UnistylesRuntime.miniRuntime)
         const dependencies = Object.values(createdStylesheet).flatMap(value => extractUnistyleDependencies(value))
 
         this.addDependenciesToStylesheet(stylesheet, dependencies)
@@ -75,8 +76,8 @@ class UnistylesRegistryBuilder {
 
         dependencies.forEach(dependency => dependenciesMap.add(dependency))
 
-        const dispose = UnistylesListener.addStylesheetListeners(Array.from(dependenciesMap), () => {
-            const newComputedStylesheet = stylesheet(UnistylesRuntime.theme, UnistylesRuntime.miniRuntime)
+        const dispose = this.services.UnistylesListener.addStylesheetListeners(Array.from(dependenciesMap), () => {
+            const newComputedStylesheet = stylesheet(this.services.UnistylesRuntime.theme, this.services.UnistylesRuntime.miniRuntime)
 
             this.stylesheets.set(stylesheet, newComputedStylesheet)
         })
@@ -220,5 +221,3 @@ class UnistylesRegistryBuilder {
         }
     }
 }
-
-export const UnistylesRegistry = new UnistylesRegistryBuilder()

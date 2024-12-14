@@ -2,18 +2,19 @@ import { UnistyleDependency } from '../specs/NativePlatform'
 import { ColorScheme, Orientation, type AppTheme, type AppThemeName } from '../specs/types'
 import type { UnistylesMiniRuntime } from '../specs/UnistylesRuntime'
 import { WebContentSizeCategory } from '../types'
-import { UnistylesListener } from './listener'
 import { NavigationBar, StatusBar } from './mock'
 import { error, isServer, schemeToTheme } from './utils'
+import type { UnistylesWebServices } from './types'
 
-// Keep this import here, otherwise circular dependency will occur and break the build
-import { UnistylesState } from './state'
-
-class UnistylesRuntimeBuilder {
+export class UnistylesRuntime {
     lightMedia = this.getLightMedia()
     darkMedia = this.getDarkMedia()
 
+    constructor(private services: UnistylesWebServices) {}
+
     private getLightMedia(): MediaQueryList | null {
+        this
+
         if (isServer()) {
             return null
         }
@@ -49,11 +50,11 @@ class UnistylesRuntimeBuilder {
     }
 
     get themeName() {
-        if (UnistylesState.hasAdaptiveThemes) {
+        if (this.services.UnistylesState.hasAdaptiveThemes) {
             return schemeToTheme(this.colorScheme) as AppThemeName
         }
 
-        return UnistylesState.themeName
+        return this.services.UnistylesState.themeName
     }
 
     get contentSizeCategory() {
@@ -61,11 +62,11 @@ class UnistylesRuntimeBuilder {
     }
 
     get breakpoints() {
-        return UnistylesState.breakpoints ?? {}
+        return this.services.UnistylesState.breakpoints ?? {}
     }
 
     get breakpoint() {
-        return UnistylesState.breakpoint
+        return this.services.UnistylesState.breakpoint
     }
 
     get orientation() {
@@ -121,7 +122,7 @@ class UnistylesRuntimeBuilder {
     }
 
     get hasAdaptiveThemes() {
-        return UnistylesState.hasAdaptiveThemes
+        return this.services.UnistylesState.hasAdaptiveThemes
     }
 
     get navigationBar() {
@@ -158,23 +159,23 @@ class UnistylesRuntimeBuilder {
             throw error(`You're trying to set theme to: '${themeName}', but adaptiveThemes are enabled.`)
         }
 
-        if (themeName === UnistylesRuntime.themeName) {
+        if (themeName === this.themeName) {
             return
         }
 
-        UnistylesState.themeName = themeName
-        UnistylesListener.emitChange(UnistyleDependency.Theme)
-        UnistylesListener.emitChange(UnistyleDependency.ThemeName)
+        this.services.UnistylesState.themeName = themeName
+        this.services.UnistylesListener.emitChange(UnistyleDependency.Theme)
+        this.services.UnistylesListener.emitChange(UnistyleDependency.ThemeName)
     }
 
     setAdaptiveThemes = (isEnabled: boolean) => {
-        UnistylesState.hasAdaptiveThemes = isEnabled
+        this.services.UnistylesState.hasAdaptiveThemes = isEnabled
 
         if (!isEnabled) {
             return
         }
 
-        this.setTheme(schemeToTheme(UnistylesRuntime.colorScheme) as AppThemeName)
+        this.setTheme(schemeToTheme(this.colorScheme) as AppThemeName)
     }
 
     setRootViewBackgroundColor = (color: string) => {
@@ -188,17 +189,17 @@ class UnistylesRuntimeBuilder {
     setImmersiveMode = () => {}
 
     updateTheme = (themeName: AppThemeName, updater: (currentTheme: AppTheme) => AppTheme) => {
-        const oldTheme = UnistylesState.themes.get(themeName)
+        const oldTheme = this.services.UnistylesState.themes.get(themeName)
 
         if (!oldTheme) {
             throw error(`Unistyles: You're trying to update theme "${themeName}" but it wasn't registered.`)
         }
 
-        UnistylesState.themes.set(themeName, updater(oldTheme))
+        this.services.UnistylesState.themes.set(themeName, updater(oldTheme))
     }
 
     getTheme = (themeName = this.themeName) => {
-        const theme = UnistylesState.themes.get(themeName ?? '')
+        const theme = this.services.UnistylesState.themes.get(themeName ?? '')
 
         if (!themeName || !theme) {
             throw error(`You're trying to get theme "${themeName}" but it wasn't registered.`)
@@ -207,5 +208,3 @@ class UnistylesRuntimeBuilder {
         return theme
     }
 }
-
-export const UnistylesRuntime = new UnistylesRuntimeBuilder()
